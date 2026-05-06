@@ -385,7 +385,7 @@ void ingame(player &p, item &it, int &rnSlot) {
         cout << "4.Advance search" << endl;
         cout << "5.Save progres" << endl;
         cout << "6.Exit to main menu" << endl;
-        cout << "Chose Action (1-5): ";
+        cout << "Chose Action (1-6): ";
         int act; cin >> act;
 
         switch(act) {
