@@ -3,7 +3,9 @@
 #include<fstream>
 #include<chrono>
 #include<thread>
+#include<filesystem>
 using namespace std;
+using namespace std::filesystem;
 
 string rarity[] ={"Common   ", "Rare     ", "Epic     ", "Legendary"};
 string type[] ={"Weapon", "Armour", "Potion"};
@@ -20,6 +22,8 @@ struct player{
     item* inventory;
     int totalItem;
 };
+
+// --- Helper Functions ---
 
 bool yesn(string command) {
     char yn;
@@ -56,7 +60,7 @@ void coout(char c, int x) {
     }
 }
 
-int maxItemName(player &p, item &i) {
+int maxItemName(player &p) {
     int x=0;
     int n= p.totalItem;
     for(int i=0; i<n; i++) {
@@ -65,7 +69,63 @@ int maxItemName(player &p, item &i) {
             x = length;
         }
     }
+
+    if(x<9) {
+        x=9;
+    }
+    
     return x;
+}
+
+int idx(player &p, int indx, int op) {
+    if(op == 1) {
+        return p.inventory[indx].type;
+    } else if(op == 2) {
+        return p.inventory[indx].rarity;
+    } else {
+        return p.inventory[indx].amount;
+    }
+}
+
+int partition(player &p, int low, int high, int op, int typ) {
+    int pivot = idx(p, high, op);
+    int i = (low - 1);
+
+    for (int j = low; j <= high - 1; j++) {
+        bool asc;
+        if(typ == 1) {
+            asc = idx(p, j, op) < pivot;
+        } else {
+            asc = idx(p, j, op) > pivot;
+        }
+        if (asc) {
+            i++;
+            item temp = p.inventory[i];
+            p.inventory[i] = p.inventory[j];
+            p.inventory[j] = temp;
+        }
+    }
+    item temp = p.inventory[i + 1];
+    p.inventory[i + 1] = p.inventory[high];
+    p.inventory[high] = temp;
+    return (i + 1);
+}
+
+void quickSort(player &p, int low, int high, int op, int typ) {
+    if (low < high) {
+        int pi = partition(p, low, high, op, typ);
+        quickSort(p, low, pi - 1, op, typ);
+        quickSort(p, pi + 1, high, op, typ);
+    }
+}
+
+// --- File Management ---
+
+void initDirectory() {
+    if (!exists("save")) {
+        create_directory("save");
+        cout << "System: Folder 'save' created." << endl;
+    }
 }
 
 string EmptySlot() {
@@ -112,7 +172,7 @@ void save(player &p, string slot) {
 void createGame(player &p, int &rnSlot) {
     cout << "Player name : ";
     cin.ignore();
-    getline(cin, p.name);\
+    getline(cin, p.name);
     p.totalItem=0;
     p.inventory=nullptr;
 
@@ -123,7 +183,7 @@ void createGame(player &p, int &rnSlot) {
     addSlot(slot);
 }
 
-bool load(player &p, item &i, int &rnSlot) {
+bool load(player &p,int &rnSlot) {
     if(EmptySlot()=="1") {
         cout << "Save file is empty, create New Game to make a save file!" << endl;
         return false;
@@ -135,7 +195,6 @@ bool load(player &p, item &i, int &rnSlot) {
             string name;
             int totalItem;
             getline(file,name);
-            //file.ignore();
             file >> totalItem;
             file.close();
 
@@ -153,10 +212,11 @@ bool load(player &p, item &i, int &rnSlot) {
             } else {
                 int totalitem;
                 delete[] p.inventory;
+                cin.ignore();
                 getline(file,p.name);
-                //file.ignore();
                 file >> totalitem;
                 p.totalItem = totalitem;
+                file.ignore();
                 p.inventory = new item[p.totalItem];
 
                 for(int i=0; i<p.totalItem; i++) {
@@ -179,21 +239,32 @@ bool load(player &p, item &i, int &rnSlot) {
     }
 }
 
-void showInventory(player &p, item &it) {
-    cout << "===" << p.name <<"'s inventory===" << endl;
-    cout << "Total item : " << p.totalItem << endl;
-    int colNo=digits(p.totalItem)-2, colName=maxItemName(p,it)-9;
-    cout << "+=="; coout('=', colNo); cout << "=========="; coout('=',colName); cout << "========================+" << endl;
-    cout << "|No"; coout(' ', colNo); cout << "|Item Name"; coout(' ',colName); cout << "|Type  |Rarity   |Amount|" << endl;
-    if(p.totalItem==0) {
-        cout << "|- |-        |-     |-        |-     |" << endl;
+// --- Inventory Logic ---
+
+void showInventory(player &p) {
+    cout << "\n===" << p.name << "'s inventory===" << endl;
+    cout << "Total items: " << p.totalItem << endl;
+    
+    int colNo = max(2, digits(p.totalItem));
+    int colName = maxItemName(p);
+    
+    // Header Border
+    cout << "+-"; coout('-', colNo); cout << "-+-"; coout('-', colName); cout << "-+--------+-----------+--------+" << endl;
+    cout << "| No"; coout(' ', colNo - 2); cout << " | Item Name"; coout(' ', colName - 9); cout << " | Type   | Rarity    | Amount |" << endl;
+    cout << "+-"; coout('-', colNo); cout << "-+-"; coout('-', colName); cout << "-+--------+-----------+--------+" << endl;
+
+    if (p.totalItem == 0) {
+        cout << "| - "; coout(' ', colNo - 2); cout << " | EMPTY"; coout(' ', colName - 5); cout << " | -      | -         | -      |" << endl;
     } else {
-        for(int i=0; i<p.totalItem; i++) {
-            cout << "|" << i+1; coout(' ', max(1,digits(p.totalItem)-digits(i+1))); cout << "|" << p.inventory[i].name; coout(' ', maxItemName(p,it)-p.inventory[i].name.length()); cout <<"|" << type[p.inventory[i].type] << "|" << rarity[p.inventory[i].rarity] << "|" << p.inventory[i].amount; coout(' ', 6-digits(p.inventory[i].amount)); cout << "|";
-            cout << endl;
+        for (int i = 0; i < p.totalItem; i++) {
+            cout << "| " << i + 1; coout(' ', colNo - digits(i + 1));
+            cout << " | " << p.inventory[i].name; coout(' ', colName - p.inventory[i].name.length());
+            cout << " | " << type[p.inventory[i].type]; coout(' ', 6 - type[p.inventory[i].type].length());
+            cout << " | " << rarity[p.inventory[i].rarity] << " | " << p.inventory[i].amount; coout(' ', 6 - digits(p.inventory[i].amount));
+            cout << " |" << endl;
         }
     }
-    cout << "+=="; coout('=', colNo); cout << "=========="; coout('=',colName); cout << "========================+" << endl;
+    cout << "+-"; coout('-', colNo); cout << "-+-"; coout('-', colName); cout << "-+--------+-----------+--------+" << endl;
 }
 
 void addItem(player &p, string name, int type, int rar, int amount) {
@@ -215,6 +286,88 @@ void addItem(player &p, string name, int type, int rar, int amount) {
     cout << "Item " << name << " successfully added to inventory" << endl << endl;
 }
 
+void sortItem(player &p) {
+    cout << "\nSorting Option" << endl;
+    cout << "1. By Type" << endl;
+    cout << "2. By Rarity" << endl;
+    cout << "3. By Amount" << endl;
+    cout << "Option : ";
+    int op; cin >> op;
+
+    cout << "Sorting Type" << endl;
+    cout << "1. Ascendeing" << endl;
+    cout << "2. Descending" << endl;
+    cout << "Type : ";
+    int typ; cin >> typ;
+
+    quickSort(p, 0, p.totalItem-1, op, typ);
+}
+
+void discardItem(player &p) {
+    if (p.totalItem == 0) {
+        cout << "Nothing to discard." << endl;
+        return;
+    }
+    cout << "Enter item number to discard (1-" << p.totalItem << "): ";
+    int index; cin >> index;
+    if (index < 1 || index > p.totalItem) {
+        cout << "Invalid index!" << endl;
+        return;
+    }
+    
+    item* newInventory = (p.totalItem > 1) ? new item[p.totalItem - 1] : nullptr;
+    int current = 0;
+    for (int i = 0; i < p.totalItem; i++) {
+        if (i == index - 1) continue;
+        newInventory[current++] = p.inventory[i];
+    }
+    
+    delete[] p.inventory;
+    p.inventory = newInventory;
+    p.totalItem--;
+    cout << "Item discarded." << endl;
+}
+
+void advancedSearch(player &p) {
+    if (p.totalItem == 0) {
+        cout << "Inventory is empty!" << endl;
+        return;
+    }
+    cout << "\n=== Advanced Search ===\n1. Name\n2. Type\n3. Rarity\nChoice: ";
+    int choice; cin >> choice;
+    bool found = false;
+
+
+    if (choice == 1) {
+        string key; cout << "Keyword: "; cin.ignore(); getline(cin, key);
+        for (int i = 0; i < p.totalItem; i++) {
+            if (p.inventory[i].name.find(key) != string::npos) {
+                cout << "- (No: " << i+1 << ") "<< p.inventory[i].name << " (x" << p.inventory[i].amount << ")" << endl;
+                found = true;
+            }
+        }
+    } else if (choice == 2) {
+        int t; cout << "1.Weapon 2.Armour 3.Potion: "; cin >> t;
+        for (int i = 0; i < p.totalItem; i++) {
+            if (p.inventory[i].type == t - 1) {
+                cout << "-(No: " << i+1 << ") "<< p.inventory[i].name << " (x" << p.inventory[i].amount << ")" << endl;
+                found = true;
+            }
+        }
+    } else if (choice == 3) {
+        int r; cout << "1.Common 2.Rare 3.Epic 4.Legendary: "; cin >> r;
+        for (int i = 0; i < p.totalItem; i++) {
+            if (p.inventory[i].rarity == r - 1) {
+                cout << "- (No: " << i+1 << ") "<< p.inventory[i].name << " (x" << p.inventory[i].amount << ")" << endl;
+                found = true;
+            }
+        }
+    }
+    if (!found) cout << "No matches found." << endl;
+}
+
+// --- Game Flow ---
+
 void ingame(player &p, item &it, int &rnSlot) {
     cout << "Entering the world";
     for(int i=0; i<3; i++) {
@@ -224,13 +377,14 @@ void ingame(player &p, item &it, int &rnSlot) {
     cout << endl << endl;
     bool exit = false;
     while(!exit) {
-        showInventory(p, it);
+        showInventory(p);
         cout << "Action : " << endl;
         cout << "1.Add item" << endl;
         cout << "2.Discard item" << endl;
         cout << "3.Sort inventory" << endl;
-        cout << "4.Save progres" << endl;
-        cout << "5.Exit to main menu" << endl;
+        cout << "4.Advance search" << endl;
+        cout << "5.Save progres" << endl;
+        cout << "6.Exit to main menu" << endl;
         cout << "Chose Action (1-5): ";
         int act; cin >> act;
 
@@ -261,7 +415,39 @@ void ingame(player &p, item &it, int &rnSlot) {
                 break;
             }
             case 2 : {
-
+                discardItem(p);
+                break;
+            }
+            case 3 : {
+                sortItem(p);
+                break;
+            }
+            case 4 : {
+                advancedSearch(p);
+                break;
+            }
+            case 5 : {
+                save(p, to_string(rnSlot));
+                cout << "Saving"; 
+                for(int i=0; i<3; i++) {
+                    this_thread :: sleep_for(chrono::seconds(1)); 
+                    cout << ".";
+                }
+                cout << "\nGame saved!\n";
+                this_thread :: sleep_for(chrono::seconds(2));
+                break;
+            }
+            case 6 : {
+                if(yesn("All unsaved progres will be lost, you sure want to exit? (y/n) : ")) {
+                    exit = true;
+                } else {
+                    cout << endl;
+                    continue;
+                }
+                break;
+            }
+            default : {
+                cout << "Invalid Input!\n";
                 break;
             }
         }
@@ -270,44 +456,54 @@ void ingame(player &p, item &it, int &rnSlot) {
 }
 
 void mainMenu(player &p, item &i, int &rnSlot) {
-    cout << "===Welcome to Ngawi RPG game===" << endl;
-    cout << "+—————————————————————————————+" << endl;
-    cout << "|=main menu=                  |" << endl;
-    cout << "|1.New Game                   |" << endl;
-    cout << "|2.Load Game                  |" << endl;
-    cout << "|3.Exit Game                  |" << endl;
-    cout << "+—————————————————————————————+" << endl;
-    bool val = false;
-    while(!val) {
-        cout << "Chose menu (1-3): ";
-        int opp; cin >> opp;
-        switch(opp) {
-            case 1 : {
-                createGame(p, rnSlot);
-                ingame(p,i, rnSlot);
-                val = true;
-                break;
-            }
-            case 2 : {
-                if(load(p,i, rnSlot)) {
+    bool exit = false;
+    while(!exit) {
+        cout << "===Welcome to Ngawi RPG game===" << endl;
+        cout << "+-----------------------------+" << endl;
+        cout << "|=main menu=                  |" << endl;
+        cout << "|1.New Game                   |" << endl;
+        cout << "|2.Load Game                  |" << endl;
+        cout << "|3.Exit Game                  |" << endl;
+        cout << "+-----------------------------+" << endl;
+        bool val = false;
+        while(!val && !exit) {
+            cout << "Chose menu (1-3): ";
+            int opp; cin >> opp;
+            switch(opp) {
+                case 1 : {
+                    createGame(p, rnSlot);
                     ingame(p,i, rnSlot);
                     val = true;
-                };
-                break;
-            }
-            case 3 : {
-                cout << "exit";
-                break;
-            }
-            default : {
-                cout << "input salah";
-                break;
+                    break;
+                }
+                case 2 : {
+                    if(load(p, rnSlot)) {
+                        ingame(p,i, rnSlot);
+                        val = true;
+                    };
+                    break;
+                }
+                case 3 : {
+                    if(yesn("You sure want to exit? (y/n) : ")) {
+                        exit = true;
+                        cout << "Byeee!\n";
+                    } else {
+                        continue;
+                    }
+                    break;
+                }
+                default : {
+                    cout << "Invalid Input!\n";
+                    break;
+                }
             }
         }
+    
     }
 }
 
 int main() {
+    initDirectory();
     player p;
     p.inventory = nullptr;
     item i;
