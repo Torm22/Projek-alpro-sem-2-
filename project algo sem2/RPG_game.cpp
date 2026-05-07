@@ -25,6 +25,23 @@ struct player{
 
 // --- Helper Functions ---
 
+int valInt(string command, string eror, int min, int max) {
+    bool val = false;
+    int x;
+    while(!val) {
+        cout << command ;
+        cin >> x;
+        if(!cin.fail() && x>= min && x<= max) {
+            val = true;
+        } else {
+            cout << eror << endl;
+            cin.clear();
+            cin.ignore();
+        }
+    }
+    return x;
+}
+
 bool yesn(string command) {
     char yn;
     cout << command;
@@ -291,14 +308,14 @@ void sortItem(player &p) {
     cout << "1. By Type" << endl;
     cout << "2. By Rarity" << endl;
     cout << "3. By Amount" << endl;
-    cout << "Option : ";
-    int op; cin >> op;
+    int op;
+    op = valInt("Option (1-3) : ", "Invalid Input!", 1, 3);
 
     cout << "Sorting Type" << endl;
     cout << "1. Ascendeing" << endl;
     cout << "2. Descending" << endl;
-    cout << "Type : ";
-    int typ; cin >> typ;
+    int typ;
+    typ = valInt("Type (1-2) : ", "Invalid Input!", 1, 2);
 
     quickSort(p, 0, p.totalItem-1, op, typ);
 }
@@ -308,13 +325,9 @@ void discardItem(player &p) {
         cout << "Nothing to discard." << endl;
         return;
     }
-    cout << "Enter item number to discard (1-" << p.totalItem << "): ";
-    int index; cin >> index;
-    if (index < 1 || index > p.totalItem) {
-        cout << "Invalid index!" << endl;
-        return;
-    }
-    
+    int index;
+    index = valInt ("Enter item number to discard (1-" + to_string(p.totalItem) + "): ", "Invalid Index!", 1, p.totalItem);
+
     item* newInventory = (p.totalItem > 1) ? new item[p.totalItem - 1] : nullptr;
     int current = 0;
     for (int i = 0; i < p.totalItem; i++) {
@@ -333,8 +346,9 @@ void advancedSearch(player &p) {
         cout << "Inventory is empty!" << endl;
         return;
     }
-    cout << "\n=== Advanced Search ===\n1. Name\n2. Type\n3. Rarity\nChoice: ";
-    int choice; cin >> choice;
+    cout << "\n=== Advanced Search ===\n1. Name\n2. Type\n3. Rarity\n";
+    int choice;
+    choice = valInt("Choice (1-3): ", "Invalid Input!", 1, 3);
     bool found = false;
 
 
@@ -347,7 +361,8 @@ void advancedSearch(player &p) {
             }
         }
     } else if (choice == 2) {
-        int t; cout << "1.Weapon 2.Armour 3.Potion: "; cin >> t;
+        int t;
+        t = valInt("1.Weapon 2.Armour 3.Potion: ", "Invalid Input!", 1, 3);
         for (int i = 0; i < p.totalItem; i++) {
             if (p.inventory[i].type == t - 1) {
                 cout << "-(No: " << i+1 << ") "<< p.inventory[i].name << " (x" << p.inventory[i].amount << ")" << endl;
@@ -355,7 +370,8 @@ void advancedSearch(player &p) {
             }
         }
     } else if (choice == 3) {
-        int r; cout << "1.Common 2.Rare 3.Epic 4.Legendary: "; cin >> r;
+        int r;
+        r = valInt("1.Common 2.Rare 3.Epic 4.Legendary: ", "Invalid Input!", 1, 4);
         for (int i = 0; i < p.totalItem; i++) {
             if (p.inventory[i].rarity == r - 1) {
                 cout << "- (No: " << i+1 << ") "<< p.inventory[i].name << " (x" << p.inventory[i].amount << ")" << endl;
@@ -385,9 +401,8 @@ void ingame(player &p, item &it, int &rnSlot) {
         cout << "4.Advance search" << endl;
         cout << "5.Save progres" << endl;
         cout << "6.Exit to main menu" << endl;
-        cout << "Chose Action (1-6): ";
-        int act; cin >> act;
-
+        int act;
+        act = valInt("Chose Action (1-6): ", "Invalid Input!", 1, 6);
         switch(act) {
             case 1 : {
                 string name;
@@ -397,9 +412,11 @@ void ingame(player &p, item &it, int &rnSlot) {
 
                 cin.ignore();
                 cout << "Name : "; getline(cin, name);
-                cout << "Type : \n1.Weapon\n2.Armour\n3.Potion\nInsert (1-3) : "; cin >> typ;
-                cout << "Rarity : \n1.Common\n2.Rare\n3.Epic\n4.Legendary\nInsert (1-4) : "; cin >> rar;
-                cout << "Amount : "; cin >> amount;
+                cout << "Type : \n1.Weapon\n2.Armour\n3.Potion\n";
+                typ = valInt("Insert (1-3) : ", "Invalid Input", 1,3);
+                cout << "Rarity : \n1.Common\n2.Rare\n3.Epic\n4.Legendary\n";
+                rar = valInt("Insert (1-4) : ", "Invalid Input", 1,4);
+                amount = valInt("Amount : ", "Invalid Input", 1, 1e9);
                 cout << endl;
     
                 cout << "Name   : " << name << endl;
@@ -440,6 +457,7 @@ void ingame(player &p, item &it, int &rnSlot) {
             case 6 : {
                 if(yesn("All unsaved progres will be lost, you sure want to exit? (y/n) : ")) {
                     exit = true;
+                    cout << endl;
                 } else {
                     cout << endl;
                     continue;
@@ -467,8 +485,8 @@ void mainMenu(player &p, item &i, int &rnSlot) {
         cout << "+-----------------------------+" << endl;
         bool val = false;
         while(!val && !exit) {
-            cout << "Chose menu (1-3): ";
-            int opp; cin >> opp;
+            int opp; 
+            opp = valInt("Chose menu (1-3): ", "Invalid Input!", 1, 3);
             switch(opp) {
                 case 1 : {
                     createGame(p, rnSlot);
