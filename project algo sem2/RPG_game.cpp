@@ -25,6 +25,7 @@ struct player{
 
 // --- Helper Functions ---
 
+// Cek input untuk variabel integer
 int valInt(string command, string eror, int min, int max) {
     bool val = false;
     int x;
@@ -42,6 +43,7 @@ int valInt(string command, string eror, int min, int max) {
     return x;
 }
 
+// Cek input masukan yes / no (Y/N)
 bool yesn(string command) {
     char yn;
     cout << command;
@@ -56,6 +58,7 @@ bool yesn(string command) {
     }
 }
 
+//Fungsi untuk menghitung digit dari suatu integer
 int digits(int x) {
     int ans = 0;
     if(x==0) {
@@ -68,6 +71,7 @@ int digits(int x) {
     return ans;
 }
 
+//Fungsi untuk cout char yang repetisi
 void coout(char c, int x) {
     if(x < 0) {
         x=0;
@@ -77,6 +81,7 @@ void coout(char c, int x) {
     }
 }
 
+//Fungsi untuk menghitung panjang string terpanjang dari player.name 
 int maxItemName(player &p) {
     int x=0;
     int n= p.totalItem;
@@ -94,6 +99,7 @@ int maxItemName(player &p) {
     return x;
 }
 
+//Fungsi untuk mengambil nilai player.inventory tergantung index dan option yang dipilih(1->type, 2->rarity, 3->amount)
 int idx(player &p, int indx, int op) {
     if(op == 1) {
         return p.inventory[indx].type;
@@ -103,6 +109,14 @@ int idx(player &p, int indx, int op) {
         return p.inventory[indx].amount;
     }
 }
+
+//Fungsi Quick Sort
+
+void swap(item &a, item &b) {
+    item tmp = a;
+    a = b;
+    b = tmp;
+} 
 
 int partition(player &p, int low, int high, int op, int typ) {
     int pivot = idx(p, high, op);
@@ -117,17 +131,12 @@ int partition(player &p, int low, int high, int op, int typ) {
         }
         if (asc) {
             i++;
-            item temp = p.inventory[i];
-            p.inventory[i] = p.inventory[j];
-            p.inventory[j] = temp;
+            swap( p.inventory[i], p.inventory[j]);
         }
     }
-    item temp = p.inventory[i + 1];
-    p.inventory[i + 1] = p.inventory[high];
-    p.inventory[high] = temp;
+    swap(p.inventory[i + 1], p.inventory[high]);
     return (i + 1);
 }
-
 void quickSort(player &p, int low, int high, int op, int typ) {
     if (low < high) {
         int pi = partition(p, low, high, op, typ);
@@ -138,6 +147,7 @@ void quickSort(player &p, int low, int high, int op, int typ) {
 
 // --- File Management ---
 
+//fungsi untuk membuat folder save jika belum ada
 void initDirectory() {
     if (!exists("save")) {
         create_directory("save");
@@ -145,9 +155,10 @@ void initDirectory() {
     }
 }
 
+//Fungsi untuk mencari slot yang kosong di slot.txt
 string EmptySlot() {
     ifstream file("save/slot.txt");
-    string line;
+    string line = "";
     string lastLine;
 
     while(getline(file,line)) {
@@ -165,12 +176,14 @@ string EmptySlot() {
     return empty;
 }
 
+//Fungsi untuk menambah slot di slot.txt
 void addSlot(string slot) {
     ofstream file("save/slot.txt", ios::app);
     file << slot << endl;
     file.close();
 }
 
+//Fungsi untuk menulis progres pada savei.txt
 void save(player &p, string slot) {
     ofstream file("save/save" + slot + ".txt");
     file << p.name << endl;
@@ -186,6 +199,7 @@ void save(player &p, string slot) {
     file.close();
 }
 
+//Fungsi untuk membuat file savei.txt baru (membuat save baru)
 void createGame(player &p, int &rnSlot) {
     cout << "Player name : ";
     cin.ignore();
@@ -200,6 +214,7 @@ void createGame(player &p, int &rnSlot) {
     addSlot(slot);
 }
 
+//Fungsi untuk load dari savei.txt ke struct player
 bool load(player &p,int &rnSlot) {
     if(EmptySlot()=="1") {
         cout << "Save file is empty, create New Game to make a save file!" << endl;
@@ -220,8 +235,7 @@ bool load(player &p,int &rnSlot) {
         bool cslot=false;
 
         while(!cslot) {
-            cout << "Chose save file by slot : ";
-            int x; cin >> x;
+            int x = valInt("Chose save file by slot : ", "Invalid Input!", 0, nSave);
 
             ifstream file("save/save"+to_string(x)+".txt");
             if(!file) {
@@ -258,6 +272,7 @@ bool load(player &p,int &rnSlot) {
 
 // --- Inventory Logic ---
 
+//Fungsi untuk menampilkan inventory dalam bentuk tabel
 void showInventory(player &p) {
     cout << "\n===" << p.name << "'s inventory===" << endl;
     cout << "Total items: " << p.totalItem << endl;
@@ -284,6 +299,7 @@ void showInventory(player &p) {
     cout << "+-"; coout('-', colNo); cout << "-+-"; coout('-', colName); cout << "-+--------+-----------+--------+" << endl;
 }
 
+//Fungsi untuk add suatu item ke p.inventory
 void addItem(player &p, string name, int type, int rar, int amount) {
     item* newInventory = new item[p.totalItem+1];
 
@@ -303,6 +319,7 @@ void addItem(player &p, string name, int type, int rar, int amount) {
     cout << "Item " << name << " successfully added to inventory" << endl << endl;
 }
 
+//Fungsi untuk sort item sesuai kategori
 void sortItem(player &p) {
     cout << "\nSorting Option" << endl;
     cout << "1. By Type" << endl;
@@ -320,6 +337,7 @@ void sortItem(player &p) {
     quickSort(p, 0, p.totalItem-1, op, typ);
 }
 
+//Fungsi untuk meghapus item dari inventory
 void discardItem(player &p) {
     if (p.totalItem == 0) {
         cout << "Nothing to discard." << endl;
@@ -341,6 +359,7 @@ void discardItem(player &p) {
     cout << "Item discarded." << endl;
 }
 
+//Fungsi untuk mencari suatu item tergantung kategori yang dipilih
 void advancedSearch(player &p) {
     if (p.totalItem == 0) {
         cout << "Inventory is empty!" << endl;
@@ -384,6 +403,7 @@ void advancedSearch(player &p) {
 
 // --- Game Flow ---
 
+//Fungsi untuk menu ingame
 void ingame(player &p, item &it, int &rnSlot) {
     cout << "Entering the world";
     for(int i=0; i<3; i++) {
@@ -473,6 +493,7 @@ void ingame(player &p, item &it, int &rnSlot) {
     
 }
 
+//Fungsi untuk main menu
 void mainMenu(player &p, item &i, int &rnSlot) {
     bool exit = false;
     while(!exit) {
@@ -520,6 +541,7 @@ void mainMenu(player &p, item &i, int &rnSlot) {
     }
 }
 
+//Fungsi utama
 int main() {
     initDirectory();
     player p;
